@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Local SQLite database (rebuilt on first start from data/reviews.json)
+data/*.db
+data/*.db-*
+
+# Generated cross-reference artifacts (re-created by `npm run cross-reference`)
+data/*-matches.json
+data/*-matches.csv
+
+# Large downloaded reference data (re-fetched by `npm run sync`)
+data/australian_postcodes.csv
+
+# Local environment files — never commit these.
+# No credentials are required to run the app; use these only for optional
+# overrides such as PORT or DB_PATH.
+.env
+.env.*
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.log
+
+# Test / coverage output
+coverage/
+.nyc_output/
+
+# Editor and OS cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
