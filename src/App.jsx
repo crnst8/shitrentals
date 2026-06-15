@@ -307,10 +307,17 @@ export function App() {
       </main>
 
       <footer>
-        <p>
-          Data last synced {formatDate(meta?.source_synced_at)}. Reviews are community submissions
-          published by the upstream source.
-        </p>
+        <div className="footer-credits">
+          <p>
+            Data last synced {formatDate(meta?.source_synced_at)} from  shitrentals.org </p>
+          <p className="footer-attribution">
+            Designed, developed &amp; deployed by
+            <a className="footer-byline" href="https://crnst8.com" target="_blank" rel="noreferrer">
+              <img src="/crnst8.png" alt="" className="footer-byline-mark" />
+              <span>Current State</span>
+            </a>
+          </p>
+        </div>
         <a href="https://www.shitrentals.org/database/search-a-shit-rental" target="_blank" rel="noreferrer">
           View original database <ExternalLink size={13} />
         </a>
@@ -392,7 +399,7 @@ function ReviewResults({ data, page, setPage, onAgency }) {
     <div className="results-section">
       <div className="results-heading">
         <div>
-          <h2>LATEST</h2>
+          <h2>REVIEWS</h2>
         </div>
       </div>
       {!data.items.length ? <Empty /> : (

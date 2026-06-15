@@ -48,3 +48,5 @@ Thumbs.db
 # Local deploy helpers (may contain host/IP notes; not part of the repo).
 front.sh
 back.sh
+
+mockups/
