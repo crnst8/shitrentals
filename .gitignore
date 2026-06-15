@@ -20,6 +20,10 @@ data/australian_postcodes.csv
 # overrides such as PORT or DB_PATH.
 .env
 .env.*
+!.env.example
+
+# Local deployment runbook (may contain host/IP/notes).
+deploy.md
 
 # Logs
 npm-debug.log*

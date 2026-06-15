@@ -1,0 +1,15 @@
+.git
+node_modules
+dist
+data/*.db
+data/*.db-*
+data/*-matches.json
+data/*-matches.csv
+data/australian_postcodes.csv
+*.log
+.env
+.env.*
+deploy.md
+.DS_Store
+coverage
+.nyc_output

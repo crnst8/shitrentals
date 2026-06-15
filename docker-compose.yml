@@ -1,0 +1,44 @@
+# API + nightly automation for a single VPS.
+#
+#   docker compose up -d --build      # start the API
+#   docker compose run --rm sync      # one-off: refresh reviews.json
+#
+# The "cron" service runs the sync + cross-reference scripts on a schedule.
+services:
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      DB_PATH: /data/shitrentals.db
+      # Origin(s) allowed to call the API from a browser (the Pages site).
+      # Comma-separated. Leave empty if the API also serves the frontend.
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
+    volumes:
+      - db:/data
+      # Re-seed source: scripts write a fresh reviews.json here, the API reads it.
+      - ./data:/app/data:ro
+    ports:
+      # Bind to localhost only; put a TLS reverse proxy (Caddy/Nginx) in front.
+      # Host port is configurable (API_HOST_PORT) so it won't clash with other
+      # services on a shared box; the container always listens on 3001.
+      - "127.0.0.1:${API_HOST_PORT:-3001}:3001"
+
+  # On-demand data refresh. Run via `docker compose run --rm sync`, or let the
+  # host crontab call it (see deploy.md). Shares the source image + data dir.
+  sync:
+    build: .
+    profiles: ["tools"]
+    command: ["npm", "run", "sync"]
+    volumes:
+      - ./data:/app/data
+
+  cross-reference:
+    build: .
+    profiles: ["tools"]
+    command: ["npm", "run", "cross-reference"]
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  db:

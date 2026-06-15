@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { openDatabase } from './database.js';
@@ -9,6 +10,17 @@ import { getAgency, getMapPoints, getMeta, listAgencies, searchReviews } from '.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const db = openDatabase();
 const app = new Hono();
+
+// When the frontend is served from a different origin (e.g. Cloudflare Pages)
+// list the allowed origin(s) in CORS_ORIGIN, comma-separated. Left unset for
+// same-origin deployments, where no CORS headers are needed.
+const corsOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+if (corsOrigins.length > 0) {
+  app.use('/api/*', cors({ origin: corsOrigins, allowMethods: ['GET'] }));
+}
 
 app.use('*', async (c, next) => {
   await next();
