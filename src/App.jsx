@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ExternalLink,
   House,
+  Info,
   KeyRound,
   ListFilter,
   Map,
@@ -39,6 +40,7 @@ export function App() {
   const [page, setPage] = useState(1);
   const [selectedReview, setSelectedReview] = useState(null);
   const [selectedAgency, setSelectedAgency] = useState(null);
+  const [showAbout, setShowAbout] = useState(false);
   const [error, setError] = useState('');
   const deferredQuery = useDeferredValue(filters.q);
 
@@ -160,7 +162,9 @@ export function App() {
           <span className="wordmark-name">shit<em>rentals</em></span>
         </a>
         <div className="source-links">
-          <span>Community-sourced from shitrentals.org</span>
+          <button type="button" className="about-link" onClick={() => setShowAbout(true)}>
+            <Info size={13} /> About
+          </button>
           <a href="https://www.shitrentals.org/review/review-a-shit-rental" target="_blank" rel="noreferrer">
             Report a rental <ExternalLink size={13} />
           </a>
@@ -300,7 +304,55 @@ export function App() {
           onShowAll={showAgencyReviews}
         />
       )}
+      {showAbout && <AboutDrawer onClose={() => setShowAbout(false)} />}
     </div>
+  );
+}
+
+function AboutDrawer({ onClose }) {
+  return (
+    <Drawer onClose={onClose}>
+      <span className="kicker">About shitrentals</span>
+      <h2>Giving power back to renters</h2>
+      <div className="about-body">
+        <p>
+          As a renter, landlords and real estate agents have access to so much information about you,
+          but you don't get that same level of transparency from them.
+        </p>
+        <p>
+          Real estate agents often provide photos of properties that are years out of date, and don't
+          tell you what it's like to actually live there. You don't get to enter into a new rental
+          knowing how difficult it might be for you to request basic repairs to be completed.
+        </p>
+        <h3>This website is here to help.</h3>
+        <p>
+          It will always be free, and there will be no ability for landlords or real estate agents to
+          pay for reviews to be removed.
+        </p>
+        <p>
+          Do your part to help your fellow renters by writing an anonymous review of your rental
+          property or real estate agency.
+        </p>
+        <p>
+          At this stage, I'll be reviewing each submission each night and uploading the submissions to
+          the page, so if you don't see your review immediately, don't stress!
+        </p>
+      </div>
+      <div className="about-links">
+        <a href="https://lonelykidsclub.com/collections/purplepingers" target="_blank" rel="noreferrer">
+          Merch <ExternalLink size={13} />
+        </a>
+        <a href="https://www.paypal.com/paypalme/ptylt" target="_blank" rel="noreferrer">
+          Donate <ExternalLink size={13} />
+        </a>
+        <a href="https://www.shitrentals.org/supporters" target="_blank" rel="noreferrer">
+          Support <ExternalLink size={13} />
+        </a>
+        <a href="https://github.com/crnst8/shitrentals" target="_blank" rel="noreferrer">
+          GitHub <ExternalLink size={13} />
+        </a>
+      </div>
+    </Drawer>
   );
 }
 
@@ -343,7 +395,7 @@ function ReviewCard({ review, onAgency }) {
         <span className="row-address">
           <SourceBadge type={review.sourceType} />
           {review.listing && <ListedBadge />}
-          <span className="row-address-text">{formatAddress(review)}</span>
+          <span className="row-address-text">{formatHeadline(review)}</span>
         </span>
         <Rating value={review.rating} />
         <time className="row-date" dateTime={dateTimeValue(submittedAt)} title={submitted}>
@@ -357,6 +409,9 @@ function ReviewCard({ review, onAgency }) {
           <div className="review-body">{body}</div>
           <dl className="review-details">
             <div><dt>Submitted</dt><dd>{submitted}</dd></div>
+            {review.sourceType === 'agency' && formatProperty(review) && (
+              <div><dt>Property</dt><dd>{formatProperty(review)}</dd></div>
+            )}
             <div><dt>Managed by</dt><dd>{review.landlordType || (review.agencyName ? 'Agency' : 'Not specified')}</dd></div>
             <div><dt>Source ID</dt><dd>{review.sourceId}</dd></div>
           </dl>
@@ -443,6 +498,9 @@ function ReviewDrawer({ review, onClose, onAgency }) {
       <div className="review-body">{review.reviewText || 'No written review supplied.'}</div>
       <dl className="review-details">
         <div><dt>Submitted</dt><dd>{formatDate(review.submittedAt || review.sourceCreatedAt)}</dd></div>
+        {review.sourceType === 'agency' && formatProperty(review) && (
+          <div><dt>Property</dt><dd>{formatProperty(review)}</dd></div>
+        )}
         <div><dt>Managed by</dt><dd>{review.landlordType || (review.agencyName ? 'Agency' : 'Not specified')}</dd></div>
         <div><dt>Source ID</dt><dd>{review.sourceId}</dd></div>
       </dl>
@@ -625,6 +683,19 @@ function formatLocation(review) {
 
 function formatAddress(review) {
   return [review.address, review.suburb, review.state].filter(Boolean).join(', ') || 'Location not specified';
+}
+
+// Agency reviews carry the agency in `title`/`agencyName` and the complained-about
+// property in `address`; lead with the agency name so it isn't shown as an address.
+function formatHeadline(review) {
+  if (review.sourceType === 'agency') {
+    return review.agencyName || review.title || 'Agency';
+  }
+  return formatAddress(review);
+}
+
+function formatProperty(review) {
+  return [review.address, review.suburb, review.state].filter(Boolean).join(', ');
 }
 
 function readInitialTab() {
