@@ -13,6 +13,7 @@
     "build": "vite build",
     "sync": "node scripts/sync-airtable.mjs",
     "cross-reference": "node scripts/cross-reference-rentals.mjs",
+    "cross-reference:update": "node scripts/cross-reference-rentals.mjs --incremental",
     "test": "node --test test/**/*.test.js",
     "lint": "eslint .",
     "verify": "npm run lint && npm run test && npm run build"

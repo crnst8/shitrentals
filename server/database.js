@@ -90,16 +90,29 @@ const migrations = [
         );
       `);
     }
+  },
+  {
+    // Records when each reviewed suburb was last cross-referenced, so the
+    // incremental scrape can prioritise never-/least-recently-scanned suburbs
+    // for discovery while always refreshing suburbs that already have matches.
+    name: '003_suburb_scans',
+    up(db) {
+      db.exec(`
+        CREATE TABLE suburb_scans (
+          suburb TEXT NOT NULL,
+          state TEXT NOT NULL,
+          last_scanned_at TEXT NOT NULL,
+          listings_seen INTEGER NOT NULL DEFAULT 0,
+          match_count INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (suburb, state)
+        );
+      `);
+    }
   }
 ];
 
-// Replaces the set of "currently listed for rent" matches produced by
-// scripts/cross-reference-rentals.mjs. Kept separate from the read-only review
-// snapshot: review ids are stable across syncs, so matches survive re-imports
-// and a re-run simply refreshes them.
-export function replaceListingMatches(db, matches, source) {
-  const matchedAt = new Date().toISOString();
-  const insert = db.prepare(`
+function listingMatchInsert(db) {
+  return db.prepare(`
     INSERT INTO listing_matches (
       review_id, source, listing_id, listing_address, listing_url,
       listing_price, listing_status, unit_match, matched_at
@@ -113,9 +126,11 @@ export function replaceListingMatches(db, matches, source) {
       listing_price=excluded.listing_price, listing_status=excluded.listing_status,
       unit_match=excluded.unit_match, matched_at=excluded.matched_at
   `);
+}
 
-  // Best match wins per review: a unit-exact (or unit-less) match beats a
-  // same-building, different-unit match.
+// Best match wins per review: a unit-exact (or unit-less) match beats a
+// same-building, different-unit match.
+function bestMatchPerReview(matches) {
   const best = new Map();
   const rank = { match: 0, none: 1, unknown: 2, mismatch: 3 };
   for (const match of matches) {
@@ -123,24 +138,85 @@ export function replaceListingMatches(db, matches, source) {
     const score = rank[match.unitMatch] ?? 4;
     if (!current || score < current.score) best.set(match.review.id, { match, score });
   }
+  return best;
+}
 
+function runMatchInsert(insert, match, source, matchedAt) {
+  insert.run({
+    reviewId: match.review.id,
+    source,
+    listingId: match.listing.id != null ? String(match.listing.id) : null,
+    listingAddress: match.listing.address || '',
+    listingUrl: match.listing.url || '',
+    listingPrice: match.listing.price || '',
+    listingStatus: match.listing.status || '',
+    unitMatch: match.unitMatch || '',
+    matchedAt
+  });
+}
+
+// Replaces the *entire* set of "currently listed for rent" matches. Used by a
+// full cross-reference run, where every reviewed suburb has been re-scanned.
+// Kept separate from the read-only review snapshot: review ids are stable
+// across syncs, so matches survive re-imports and a re-run simply refreshes.
+export function replaceListingMatches(db, matches, source) {
+  const matchedAt = new Date().toISOString();
+  const insert = listingMatchInsert(db);
+  const best = bestMatchPerReview(matches);
   return db.transaction(() => {
     db.prepare('DELETE FROM listing_matches').run();
-    for (const { match } of best.values()) {
-      insert.run({
-        reviewId: match.review.id,
-        source,
-        listingId: match.listing.id != null ? String(match.listing.id) : null,
-        listingAddress: match.listing.address || '',
-        listingUrl: match.listing.url || '',
-        listingPrice: match.listing.price || '',
-        listingStatus: match.listing.status || '',
-        unitMatch: match.unitMatch || '',
-        matchedAt
-      });
-    }
+    for (const { match } of best.values()) runMatchInsert(insert, match, source, matchedAt);
     return best.size;
   })();
+}
+
+// Merges matches from a *partial* (incremental) run. Only the reviews whose
+// suburbs were actually scanned this run are authoritative: their old matches
+// are cleared first (so a property that has since been delisted is removed) and
+// the freshly-found matches inserted (new + status/price refresh). Matches for
+// suburbs not scanned this run are left untouched. `scannedReviewIds` is the
+// set of review ids belonging to the suburbs that were successfully scanned.
+export function mergeListingMatches(db, matches, source, scannedReviewIds) {
+  const matchedAt = new Date().toISOString();
+  const insert = listingMatchInsert(db);
+  const del = db.prepare('DELETE FROM listing_matches WHERE review_id = ?');
+  const best = bestMatchPerReview(matches);
+  return db.transaction(() => {
+    for (const reviewId of scannedReviewIds) del.run(reviewId);
+    for (const { match } of best.values()) runMatchInsert(insert, match, source, matchedAt);
+    return best.size;
+  })();
+}
+
+// Records that a suburb was scanned, for discovery rotation.
+export function recordSuburbScan(db, suburb, state, listingsSeen, matchCount) {
+  db.prepare(`
+    INSERT INTO suburb_scans (suburb, state, last_scanned_at, listings_seen, match_count)
+    VALUES (@suburb, @state, @at, @seen, @matches)
+    ON CONFLICT(suburb, state) DO UPDATE SET
+      last_scanned_at=excluded.last_scanned_at,
+      listings_seen=excluded.listings_seen,
+      match_count=excluded.match_count
+  `).run({ suburb, state, at: new Date().toISOString(), seen: listingsSeen, matches: matchCount });
+}
+
+// Suburbs that currently have at least one match (always re-scanned to keep
+// status fresh and catch delistings), and the least-recently-scanned suburbs
+// (for discovering new matches a batch at a time).
+export function matchedSuburbKeys(db) {
+  return new Set(
+    db.prepare(`
+      SELECT DISTINCT r.suburb AS suburb, r.state AS state
+      FROM listing_matches m JOIN reviews r ON r.id = m.review_id
+    `).all().map((row) => `${row.suburb}|${row.state}`)
+  );
+}
+
+export function suburbScanTimes(db) {
+  return new Map(
+    db.prepare('SELECT suburb, state, last_scanned_at FROM suburb_scans').all()
+      .map((row) => [`${row.suburb}|${row.state}`, row.last_scanned_at])
+  );
 }
 
 export function openDatabase(options = {}) {

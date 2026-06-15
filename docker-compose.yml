@@ -33,11 +33,21 @@ services:
     volumes:
       - ./data:/app/data
 
+  # Writes "currently listed" matches straight into the API's database, so it
+  # must share the same db volume and DB_PATH as the api service (not the
+  # ./data copy). ./data is still mounted for the postcode cache + the
+  # rental-matches.{json,csv} artifacts it also emits.
   cross-reference:
     build: .
     profiles: ["tools"]
-    command: ["npm", "run", "cross-reference"]
+    # Incremental update (cron path): refresh suburbs that already have matches
+    # and discover a rotating batch of new ones. For a full rebuild run
+    # `docker compose run --rm cross-reference npm run cross-reference`.
+    command: ["npm", "run", "cross-reference:update"]
+    environment:
+      DB_PATH: /data/shitrentals.db
     volumes:
+      - db:/data
       - ./data:/app/data
 
 volumes:
