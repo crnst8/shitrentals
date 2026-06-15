@@ -26,11 +26,25 @@ services:
 
   # On-demand data refresh. Run via `docker compose run --rm sync`, or let the
   # host crontab call it (see deploy.md). Shares the source image + data dir.
+  # Refreshes data/reviews.json from the public Airtable share (writes to the
+  # bind-mounted ./data). Follow with the reseed service to apply it to the DB.
   sync:
     build: .
     profiles: ["tools"]
     command: ["npm", "run", "sync"]
     volumes:
+      - ./data:/app/data
+
+  # Applies a refreshed data/reviews.json to the live DB volume, preserving the
+  # listing matches. Shares the api's db volume + DB_PATH.
+  reseed:
+    build: .
+    profiles: ["tools"]
+    command: ["npm", "run", "reseed"]
+    environment:
+      DB_PATH: /data/shitrentals.db
+    volumes:
+      - db:/data
       - ./data:/app/data
 
   # Writes "currently listed" matches straight into the API's database, so it

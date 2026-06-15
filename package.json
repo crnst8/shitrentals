@@ -12,6 +12,7 @@
     "start": "node server/app.js",
     "build": "vite build",
     "sync": "node scripts/sync-airtable.mjs",
+    "reseed": "node scripts/reseed.mjs",
     "cross-reference": "node scripts/cross-reference-rentals.mjs",
     "cross-reference:update": "node scripts/cross-reference-rentals.mjs --incremental",
     "test": "node --test test/**/*.test.js",
