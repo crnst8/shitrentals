@@ -42,6 +42,7 @@ export function App() {
   const [selectedAgency, setSelectedAgency] = useState(null);
   const [showAbout, setShowAbout] = useState(false);
   const [error, setError] = useState('');
+  const [searchHidden, setSearchHidden] = useState(false);
   const deferredQuery = useDeferredValue(filters.q);
 
   useEffect(() => {
@@ -51,6 +52,28 @@ export function App() {
   useEffect(() => {
     window.history.replaceState(null, '', tab === 'reviews' ? '/' : `/?view=${tab}`);
   }, [tab]);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    let ticking = false;
+    function update() {
+      const currentY = window.scrollY;
+      // Ignore tiny movements; always reveal near the top of the page.
+      if (Math.abs(currentY - lastY) > 6) {
+        setSearchHidden(currentY > lastY && currentY > 120);
+        lastY = currentY;
+      }
+      ticking = false;
+    }
+    function onScroll() {
+      if (!ticking) {
+        window.requestAnimationFrame(update);
+        ticking = true;
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   useEffect(() => {
     if (tab !== 'reviews') return;
@@ -162,18 +185,25 @@ export function App() {
           <span className="wordmark-name">shit<em>rentals</em></span>
         </a>
         <div className="source-links">
-          <button type="button" className="about-link" onClick={() => setShowAbout(true)}>
-            <Info size={13} /> About
+          <button type="button" className="about-link" onClick={() => setShowAbout(true)} aria-label="About">
+            <Info size={13} /><span className="about-label">About</span>
           </button>
-          <a href="https://www.shitrentals.org/review/review-a-shit-rental" target="_blank" rel="noreferrer">
-            Report a rental <ExternalLink size={13} />
+          <a
+            href="https://www.shitrentals.org/review/review-a-shit-rental"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Report a rental"
+          >
+            <span className="report-label-full">Report a rental</span>
+            <span className="report-label-short">Report</span>
+            <ExternalLink size={13} />
           </a>
         </div>
       </header>
 
       <main>
         <section className="explorer">
-          <div className="search-panel">
+          <div className={`search-panel${searchHidden ? ' is-hidden' : ''}`}>
             <div className="search-box">
               <Search size={21} />
               <input
@@ -194,7 +224,7 @@ export function App() {
             <nav className="view-tabs" aria-label="Database views">
               <Tab active={tab === 'reviews'} onClick={() => setTab('reviews')} icon={ListFilter}>Reviews</Tab>
               <Tab active={tab === 'map'} onClick={() => setTab('map')} icon={Map}>Map</Tab>
-              <Tab active={tab === 'repeat'} onClick={() => setTab('repeat')} icon={ShieldAlert}>Repeat agencies</Tab>
+              <Tab active={tab === 'repeat'} onClick={() => setTab('repeat')} icon={ShieldAlert} short="Repeat">Repeat agencies</Tab>
             </nav>
 
             <div className="filters">
@@ -576,7 +606,11 @@ function SourceBadge({ type }) {
 }
 
 function ListedBadge() {
-  return <span className="listed-badge"><KeyRound size={12} /> Listed for rent</span>;
+  return (
+    <span className="listed-badge" title="Currently listed for rent">
+      <KeyRound size={12} /><span className="listed-badge-label">Listed for rent</span>
+    </span>
+  );
 }
 
 function ListingCallout({ listing }) {
@@ -630,8 +664,14 @@ function Rating({ value, compact = false }) {
   );
 }
 
-function Tab({ active, onClick, icon: Icon, children }) {
-  return <button className={active ? 'active' : ''} onClick={onClick}><Icon size={16} /> {children}</button>;
+function Tab({ active, onClick, icon: Icon, children, short }) {
+  return (
+    <button className={active ? 'active' : ''} onClick={onClick}>
+      <Icon size={16} />
+      <span className="tab-label-full">{children}</span>
+      <span className="tab-label-short">{short ?? children}</span>
+    </button>
+  );
 }
 
 function Stat({ value, label }) {

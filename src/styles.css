@@ -81,8 +81,9 @@ button:focus-visible, a:focus-visible, select:focus-visible {
   text-transform: lowercase;
 }
 .wordmark-name em { font-style: normal; color: var(--gold-deep); }
-.source-links { display: flex; align-items: center; gap: 18px; color: var(--muted); font-size: 12px; }
-.source-links span { font-family: 'Space Mono', monospace; letter-spacing: -.02em; }
+.source-links { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
+.source-links a, .source-links .about-link { flex: none; white-space: nowrap; }
+.report-label-short { display: none; }
 .source-links a, footer a {
   display: inline-flex;
   align-items: center;
@@ -182,6 +183,15 @@ main { width: min(1260px, calc(100% - 40px)); margin: 0 auto; }
   border: 2px solid var(--ink);
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(12px);
+  transition: transform .28s ease, opacity .28s ease;
+}
+.search-panel.is-hidden {
+  transform: translateY(calc(-100% - 64px));
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .search-panel { transition: none; }
 }
 .search-box {
   height: 56px;
@@ -223,6 +233,7 @@ main { width: min(1260px, calc(100% - 40px)); margin: 0 auto; }
   transition: background .2s ease, color .2s ease, box-shadow .2s ease;
 }
 .view-tabs button:first-child { border-left: 0; }
+.tab-label-short { display: none; }
 .view-tabs button:hover { background: var(--paper-deep); }
 .view-tabs button.active { color: var(--paper); background: var(--ink); box-shadow: inset 0 -3px 0 var(--red); }
 
@@ -271,6 +282,7 @@ main { width: min(1260px, calc(100% - 40px)); margin: 0 auto; }
   border: 1.5px solid var(--ink);
   font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .02em;
 }
+.listed-badge > svg { flex: none; }
 
 .listing-callout {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
@@ -537,19 +549,27 @@ footer a { text-transform: uppercase; }
 
 @media (max-width: 680px) {
   body { background-image: none; }
-  .masthead { height: 58px; padding: 0 14px; }
-  .source-links span { display: none; }
-  .source-links { gap: 0; }
+  .masthead { height: 58px; gap: 12px; padding: 0 14px; }
+  .source-links { gap: 8px; }
   main, footer { width: min(100% - 24px, 1260px); }
   .search-panel { top: 58px; padding: 10px; }
-  .view-tabs { overflow-x: auto; width: 100%; }
-  .view-tabs button { white-space: nowrap; }
+  /* resize the tabs to share the width instead of scrolling */
+  .view-tabs { width: 100%; }
+  .view-tabs button { flex: 1; min-width: 0; justify-content: center; gap: 5px; padding: 9px 6px; font-size: 11px; white-space: nowrap; }
+  .tab-label-full { display: none; }
+  .tab-label-short { display: inline; }
   .filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .filters select, .reset-button { width: 100%; min-width: 0; }
+  /* full-width so the count badge can't spill out of a narrow grid cell */
+  .filters .listed-toggle { grid-column: 1 / -1; width: 100%; justify-content: space-between; }
   .results-heading { align-items: flex-start; flex-direction: column; gap: 5px; }
   .row-main { grid-template-columns: minmax(0, 1fr) 108px 18px; gap: 12px; }
   .row-date { display: none; }
+  .row-address { gap: 8px; }
   .row-address-text { font-size: 14px; }
+  /* collapse to an icon chip so it never squeezes the address out */
+  .listed-badge { padding: 3px 4px; }
+  .listed-badge-label { display: none; }
   .map-frame { height: 62vh; }
   .map-note { left: 10px; right: 10px; text-align: center; }
   .agency-row { grid-template-columns: 26px minmax(130px, 1fr) 48px 18px; gap: 9px; padding: 14px 12px; }
@@ -558,6 +578,21 @@ footer a { text-transform: uppercase; }
   .drawer h2 { font-size: 28px; }
   .agency-metrics .stat { padding: 13px 8px; }
   footer { align-items: flex-start; flex-direction: column; }
+}
+
+@media (max-width: 460px) {
+  /* trim the masthead so the report button never wraps/overflows on small phones */
+  .masthead { gap: 8px; }
+  .about-label { display: none; }
+  .source-links .about-link { padding: 7px 9px; }
+  .report-label-full { display: none; }
+  .report-label-short { display: inline; }
+  .wordmark-name { font-size: 19px; }
+  .row-main { grid-template-columns: minmax(0, 1fr) 92px 16px; gap: 8px; padding: 12px; }
+  .row-main > .rating { width: 92px; }
+  .results-heading h2 { font-size: 26px; }
+  .agency-metrics .stat { padding: 12px 6px; }
+  .agency-metrics .stat strong { font-size: 26px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
